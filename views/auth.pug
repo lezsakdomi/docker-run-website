@@ -1,0 +1,10 @@
+extends layout
+
+block content
+    h1= title
+    p Please log in using one of the following services:
+    ul
+        each authProvider in authProviders
+            - const friendlyAuthProviderName = authProvider[0].toUpperCase() + authProvider.slice(1)
+            li
+                a(href=base + '/' + authProvider)= friendlyAuthProviderName

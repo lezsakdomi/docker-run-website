@@ -1,0 +1,15 @@
+extends layout
+
+block content
+    h1= title
+    each user in users
+        form.entry(action="/users/" + user._id, attend=user.privileged)
+            span.displayName= user.displayName
+            span.type= user.provider
+            div.actions
+                button Details view
+                button.delete(formmethod='post', name='action', value='delete') Delete
+                if user.privileged
+                    button.deny(formmethod='post', name='action', value='deny') Disable
+                else
+                    button.permit(formmethod='post', name='action', value='permit') Enable

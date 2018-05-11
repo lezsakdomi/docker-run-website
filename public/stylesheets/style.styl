@@ -1,0 +1,40 @@
+body
+  padding: 50px
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif
+  background #EFF0F1
+a
+  color: #00B7FF
+.entry
+  border 1px solid gray
+  border-radius 5px
+  padding 10px
+  margin 10px
+  overflow auto
+  font-size larger
+  .displayName
+    margin-left 10px
+    margin-right 0
+  .type
+    margin-left 0.4em
+    font-style italic
+    &::before
+      content "("
+    &::after
+      content ")"
+  .actions
+    float right
+    margin 0
+    *
+      margin-top 0
+      margin-bottom 0
+    button
+      margin-left 5px
+      margin-right 5px
+      min-width 6em
+  *
+    margin-left 1em
+    margin-right 1em
+  &:hover
+    background antiquewhite !important
+  &[attend]
+    background white

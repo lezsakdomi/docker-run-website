@@ -1,0 +1,17 @@
+extends layout
+
+block append head
+    link(rel='stylesheet' href='/node_modules/xterm/dist/xterm.css')
+    link(rel='stylesheet' href='/stylesheets/shell.css')
+    script(src='/node_modules/xterm/dist/xterm.js')
+    script(src='/node_modules/xterm/dist/addons/attach/attach.js')
+    script(src='/node_modules/xterm/dist/addons/fit/fit.js')
+    script(src='/javascripts/shell.js')
+block content
+    if title !== undefined
+        h1= title
+    if socket !== undefined
+        input(type='hidden', name='socket', value=socket)
+    if autoBack !== undefined
+        input(type='hidden', name='auto-back', value=false)
+    div#terminal

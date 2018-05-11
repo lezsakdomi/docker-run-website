@@ -1,0 +1,22 @@
+extends layout
+
+block content
+    h1= title
+    a(href='/setups/new')
+        button#new Set up a new server
+    button#refresh(onclick='location.reload();') Refresh
+    if user && user.superuser
+        form(action='/setups/reload' method='post')
+            button#reload Reload server
+    each setup in setups
+        - const display = "/setups/" + setup._id; const download = display + "/download";
+        form.entry(action=display, attend=setup.failed)
+            span.displayName= setup.input
+            span.type= setup.dateStarted
+            div.actions
+                button(name="property", value="output") Logs
+                button(name="property", value="archive", formaction=download) Download archive
+                if setup.container && containers.includes(setup.container)
+                    button(formmethod='post', formaction=display+"/container/remove") Drop recovery keys
+                if user && user.superuser
+                    button(formmethod='post', formaction=display+"/delete") Delete entry

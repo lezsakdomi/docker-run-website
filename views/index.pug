@@ -1,0 +1,28 @@
+extends layout
+
+block content
+    h1= title
+    p Welcome to #{title}
+    p
+        | A few things to do:
+        ul
+            if user
+                li
+                    a(href='/info') View user information
+                if user.privileged
+                    li
+                        a(href='/users') Manage other users
+                    li
+                        a(href='/setups') Manage server setups
+                if user.superuser
+                    li
+                        a(href='/shell') Open an emergency shell
+                li
+                    a(href='/logout') Log out
+                if !user.privileged
+                    li Wait until someone verifies your account
+            else
+                li
+                    a(href='/auth/') Log in
+                li
+                    a(href='http://hmpg.net/') Leave this site

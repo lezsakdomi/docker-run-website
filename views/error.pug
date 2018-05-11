@@ -1,0 +1,10 @@
+extends layout
+
+block content
+    h1= message || "Ouch, an error occurred"
+    if error
+        h2= error.status
+        pre #{error.stack}
+    if techData
+        h2 Technical details
+        pre #{JSON.stringify(techData, null, 4)}
