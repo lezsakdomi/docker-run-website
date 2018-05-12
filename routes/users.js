@@ -4,7 +4,7 @@ const router = express.Router({});
 router.use(require('../middlewares/protect'));
 
 router.all('/', function (req, res, next) {
-    global.db.then(db => {
+    require('../modules/db').then(db => {
         const collection = db.collection('users');
         collection.find()
             .toArray()
@@ -20,7 +20,7 @@ router.all('/', function (req, res, next) {
 router.all('/:id', (req, res, next) => {
     const id = req.params.id;
     const query = {_id: id};
-    global.db.then(db => {
+    require('../modules/db').then(db => {
         const collection = db.collection("users");
         collection.findOne(query).then(result => {
             if (result) {

@@ -8,13 +8,36 @@ const tar = require('tar');
 const protect = require('../middlewares/protect');
 const EventedArray = require('array-events');
 
-const image = 'server-setup';
-const docker = new Docker();
+// Hack for IDEA
+if (1 === 2) {
+    // noinspection JSUnusedLocalSymbols
+    router.post = router.websocket = (path, ...f) => undefined;
+    // noinspection JSUnusedLocalSymbols
+    MongoDB.ObjectID.isValid = MongoDB.ObjectId.isValid = string => undefined;
+}
 
+const image = 'server-setup';
+
+const docker = new Docker();
 const setups = new EventedArray();
 
+// Hack for IDEA
+if (1 === 2) {
+    // noinspection JSUnusedLocalSymbols
+    setups.slice = (from, to) => undefined;
+    // noinspection JSUnusedLocalSymbols
+    setups.combine = (otherArray) => undefined;
+    // noinspection JSUnusedLocalSymbols
+    setups.push = (...items) => undefined;
+    // noinspection JSUnusedLocalSymbols
+    setups.erase = filter => undefined;
+    // noinspection JSUnusedLocalSymbols
+    setups.on = setups.off = (event, f) => undefined;
+}
+
 function reloadSetups() {
-    db.then(db => {
+    // noinspection JSUnresolvedFunction
+    require('../modules/db').then(db => {
         db.collection('setups').find().sort({dateStarted: -1}).toArray().then(result => {
             setups.slice(0, 0);
             setups.combine(result);
@@ -25,11 +48,13 @@ function reloadSetups() {
 const containers = new EventedArray();
 
 function reloadContainers() {
+    // noinspection JSCheckFunctionSignatures
     docker.listContainers({
         all: true,
         //TODO filter
     }).then(result => {
         containers.slice(0, 0);
+        // noinspection JSUnresolvedVariable
         containers.combine(result.map(c => c.Id));
     });
 }
@@ -44,7 +69,8 @@ reload();
 router.use(protect);
 
 router.get('/', (req, res, next) => {
-    global.db.then(db => {
+    // noinspection JSUnresolvedFunction
+    require('../modules/db').then(db => {
         const collection = db.collection('setups');
         collection.find().sort({dateStarted: -1}).toArray().then(setups => res.render('setups', {
             title: "Manage setups", setups: setups, containers: containers,
@@ -62,7 +88,50 @@ router.post('/reload', protect.superuser, (req, res) => {
 });
 
 router.websocket('/updates', ({req}, cb) => {
+    cb(socket => {
+        const ttry = f => {
+            function fail(e) {
+                try {
+                    socket.send(JSON.stringify({
+                        type: "error", message: e.toString(), stack: e.stack,
+                    }));
+                    console.warn(e);
+                } catch (e2) {
+                    console.error(e2, e);
+                }
+            }
 
+            return function () {
+                try {
+                    const res = f.apply(this, arguments);
+                    if (res && res.catch) res.catch(fail);
+                    return res;
+                } catch (e) {
+                    fail(e);
+                }
+            }
+        };
+
+        ttry(() => {
+            socket.send(JSON.stringify({
+                type: "welcome",
+            }));
+
+            const containersChange = ttry(event => socket.send(JSON.stringify({
+                type: "list-change", list: "containers", event: event,
+            })));
+            containers.on('change', containersChange);
+            socket.on('close', () => {
+                return containers.off(containersChange);
+            });
+
+            const setupsChange = ttry(event => socket.send(JSON.stringify({
+                type: "list-change", list: "setups", event: event,
+            })));
+            setups.on('change', setupsChange);
+            socket.on('close', () => setups.off(setupsChange));
+        })();
+    });
 });
 
 router.get('/new', (req, res) => {
@@ -121,6 +190,15 @@ router.websocket('/new/:w/:h', ({req}, cb) => {
                     socket.send("\033[2K");
 
                     const remoteStream = webscoketStream(socket, {binary: true});
+
+                    // Hack for IDEA
+                    if (1 === 2) {
+                        // noinspection JSUnusedLocalSymbols
+                        remoteStream.pipe = stream => undefined;
+                        // noinspection JSUnusedLocalSymbols
+                        remoteStream.on = (event, f) => undefined;
+                    }
+
                     const remoteCollect = remoteStream.pipe(new Collect());
 
                     dockerStream.pipe(remoteStream);
@@ -163,7 +241,6 @@ router.websocket('/new/:w/:h', ({req}, cb) => {
                                         let found = false;
                                         archiveStream.pipe(new tar.Parse())
                                             .on('entry', entry => {
-                                                console.debug("New entry!");
                                                 if (entry.path === "exports/json") {
                                                     entry.pipe(new Collect()).collect()
                                                         .then(data => {
@@ -182,17 +259,14 @@ router.websocket('/new/:w/:h', ({req}, cb) => {
                                                 if (!found) {
                                                     reject(new Error("No JSON export found"));
                                                 }
-                                                console.debug("parse end");
                                             })
                                             .on('abort', reject);
                                     })),
                             }).forEach((entry) => {
                                 const [index, value] = entry;
-                                console.debug("Order: ", index);
                                 dataPromise = dataPromise.then(data => value.then(
                                     value => {
                                         data[index] = value;
-                                        console.debug(index, "gathered");
                                         return data;
                                     },
                                     error => {
@@ -213,9 +287,8 @@ router.websocket('/new/:w/:h', ({req}, cb) => {
                                 ));
                             });
 
-                            Promise.all([dataPromise, db]).then(([data, db]) =>
-                                db.collection('setups').insertOne(data))
-                                .then(res => console.debug("saved"));
+                            Promise.all([dataPromise, require('../modules/db')])
+                                .then(([data, db]) => db.collection('setups').insertOne(data));
                             dataPromise.then(data => setups.push(data), console.error);
                         }))
                     }));
@@ -236,19 +309,20 @@ router.get('/:id', (req, res) => {
 router.get('/:id/download', (req, res) => {
     const id = req.params.id;
     const property = req.query.property || "output";
-    global.db.then(db => {
+    // noinspection JSUnresolvedFunction
+    require('../modules/db').then(db => {
         const collection = db.collection('setups');
         const _id = MongoDB.ObjectID.isValid(id) ? new MongoDB.ObjectID(id) : id;
         return collection.findOne({_id: _id})
             .then(document => {
                 if (document === null) {
-                    res.status(404, 'No matching document found').render('error', {
-                        title: "Not found", message: "404 No such setup ID",
+                    res.status(404).render('error', {
+                        title: "Not found", message: "404 No such document in the database",
                         techData: {id: id, type: _id.constructor.name},
                     });
                 } else {
                     if (!document.hasOwnProperty(property)) {
-                        res.status(410, "Property not saved").render('error', {
+                        res.status(410).render('error', {
                             title: "Not saved", message: "410 Property not present",
                             techData: property,
                         });
@@ -291,7 +365,8 @@ router.websocket('/:id/:property/:cols/:rows', ({req}, cb) => cb(socket => {
     const id = req.params.id;
     const property = req.params.property;
     socket.send("\033[JConnecting to database...\r");
-    global.db.then(db => {
+    // noinspection JSUnresolvedFunction
+    require('../modules/db').then(db => {
         socket.send("\033[JRetriving archive...\r");
         const collection = db.collection('setups');
         const _id = MongoDB.ObjectID.isValid(id) ? new MongoDB.ObjectID(id) : id;
@@ -314,35 +389,38 @@ router.websocket('/:id/:property/:cols/:rows', ({req}, cb) => cb(socket => {
             }
             socket.close();
         });
-    }, e => res.status(500, "Database connection error").render('error', {
-        message: "Database connection failed", error: e,
-    }));
+    }, e => {
+        socket.send("\033[J\033[31;1mError: Database connection failed\033[0m [500]\n");
+        socket.send("\033]9999;E_DB\033\\");
+        socket.send(e.stack);
+    });
 }));
 
 router.post('/:id/container/remove', (req, res) => {
     const id = req.params.id;
     const property = "container";
-    global.db.then(db => {
+    // noinspection JSUnresolvedFunction
+    require('../modules/db').then(db => {
         const collection = db.collection('setups');
         const _id = MongoDB.ObjectID.isValid(id) ? new MongoDB.ObjectID(id) : id;
         return collection.findOne({_id: _id}).then(document => {
             if (document === null) {
-                res.status(404, 'No matching document found').render('error', {
-                    title: "Not found", message: "404 No such setup ID",
+                res.status(404).render('error', {
+                    title: "Not found", message: "404 No matching document in the database",
                     techData: {id: id, type: _id.constructor.name},
                 });
             } else {
                 if (!document.hasOwnProperty(property)) {
-                    res.status(410, "Property not saved").render('error', {
+                    res.status(410).render('error', {
                         title: "Not saved", message: "410 Property not present",
                         techData: property,
                     });
                 } else {
                     const containerId = document[property];
-                    docker.getContainer(containerId).remove({})
+                    docker.getContainer(containerId).remove({}, undefined)
                         .then(() => containers.erase(containerId))
                         .then(() => res.redirect('/setups'), (err) => {
-                            res.status(500, "Operation failed").render('error', {
+                            res.status(500).render('error', {
                                 message: "Failed to remove container",
                                 error: err, techData: containerId,
                             });
@@ -350,14 +428,15 @@ router.post('/:id/container/remove', (req, res) => {
                 }
             }
         });
-    }, e => res.status(500, "Database connection error").render('error', {
+    }, e => res.status(500).render('error', {
         message: "Database connection failed", error: e,
     }));
 });
 
 router.post('/:id/delete', (req, res) => {
     const id = req.params.id;
-    global.db.then(db => {
+    // noinspection JSUnresolvedFunction
+    require('../modules/db').then(db => {
         const collection = db.collection('setups');
         const _id = MongoDB.ObjectID.isValid(id) ? new MongoDB.ObjectID(id) : id;
         // noinspection EqualityComparisonWithCoercionJS
@@ -375,7 +454,7 @@ router.post('/:id/delete', (req, res) => {
                 message: "MongoDB delete failed", error: e,
                 techData: id,
             }));
-    }, e => res.status(500, "Database connection error").render('error', {
+    }, e => res.status(500).render('error', {
         message: "Database connection failed", error: e,
     }));
 });

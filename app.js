@@ -3,40 +3,10 @@ const express = require('express');
 const path = require('path');
 const logger = require('morgan');
 const stylus = require('stylus');
-const passport = require('passport');
 const session = require('express-session');
-const mongodb = require('mongodb');
+const passport = require('passport');
 
-// Hack for IDEA
-if (1 === 2) {
-    passport.serializeUser = undefined;
-    passport.deserializeUser = undefined;
-}
-
-global.db = mongodb.MongoClient
-    .connect("mongodb://localhost:27017/")
-    .then(connection => connection.db("server-setup"));
-
-const expressWs = require('express-ws-routes');
-const expressWsOptions = {};
-const app = expressWs.extendExpress(expressWsOptions)();
-
-const protect = require('./middlewares/protect');
-const shellRouter = require('./routes/shell');
-const indexRouter = require('./routes/index');
-const usersRouter = require('./routes/users');
-const authRouter = require('./routes/auth').multiRouter(
-    'https://ledomi.duckdns.org:3443/auth',
-    {
-        successRedirect: '/',
-        failureRedirect: '/auth',
-        failureFlash: true
-    },
-    passport
-);
-const setupsRouter = require('./routes/setups');
-
-global.db.then(db => {
+require('./modules/db').then(db => {
     const collection = db.collection("users");
 
     passport.serializeUser((user, done) => {
@@ -60,11 +30,22 @@ global.db.then(db => {
     passport.deserializeUser((string, done) => {
         collection.findOne({_id: string}).then(result => done(null, result), err => done(err));
     });
-}, (err) => {
-    console.error("Could not set up DB connection:", err);
+}, () => {
     passport.serializeUser((user, done) => done(null, JSON.stringify(user)));
     passport.deserializeUser((string, done) => done(null, JSON.parse(string)));
 });
+
+const expressWs = require('express-ws-routes');
+const expressWsOptions = {};
+const app = expressWs.extendExpress(expressWsOptions)();
+
+// Hack for IDEA
+if (1 === 2) {
+    // noinspection JSUnusedLocalSymbols
+    app.websocket = (path, f) => undefined;
+}
+
+const protect = require('./middlewares/protect');
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -78,25 +59,36 @@ app.use(stylus.middleware(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')));
 app.use(session({secret: 'keyboard cat'}));
-app.use(authRouter.passport.initialize());
-app.use(authRouter.passport.session());
+app.use(passport.initialize({}));
+app.use(passport.session({}));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
-app.use('/auth', authRouter);
+app.use('/', require('./routes/index'));
+app.use('/users', require('./routes/users'));
+app.use('/auth', require('./routes/auth').multiRouter(
+    'https://ledomi.duckdns.org:3443/auth',
+    {
+        successRedirect: '/',
+        failureRedirect: '/auth',
+        failureFlash: true,
+    },
+    require('passport')
+));
 app.use('/logout', (req, res) => {
     req.logout();
     res.redirect('/');
 });
-app.use('/shell', shellRouter);
+app.use('/shell', require('./routes/shell'));
 app.use('/info', protect.valid, (req, res) => {
     res.json(req.user);
 });
-app.use('/setups', setupsRouter);
+app.use('/setups', require('./routes/setups'));
 app.websocket('/echo', ({req}, cb) => cb(socket => socket.on('message',
     message => socket.send(message))));
 app.websocket('/echo/s/:a/:b', ({req}, cb) => cb(socket => socket.on('message',
     message => socket.send(message.replace(req.params.a, req.params.b)))));
+app.use('/customshell', (req, res) => {
+    res.render('shell', req.query);
+});
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

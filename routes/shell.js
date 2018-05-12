@@ -52,7 +52,6 @@ router.websocket('/bash/:cols/:rows', function ({req}, cb) {
             }));
 
             socket.on('close', ttry(() => {
-                console.debug("Socket closed");
                 return terminal.kill('SIGHUP');
             }));
 
@@ -61,12 +60,10 @@ router.websocket('/bash/:cols/:rows', function ({req}, cb) {
             }));
 
             terminal.on('close', ttry(() => {
-                console.debug("Terminal exited");
                 socket.send("\r\n");
             }));
 
             terminal.on('exit', ttry((code, signal) => {
-                console.debug("Terminal exited");
                 socket.send("Process terminated. Exit code: \033[1m" + code + "\033[0m");
                 if (signal) socket.send(" (got signal \033[1;31m" + signal + "\033[0m)");
                 return socket.close();

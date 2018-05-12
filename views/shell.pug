@@ -13,5 +13,7 @@ block content
     if socket !== undefined
         input(type='hidden', name='socket', value=socket)
     if autoBack !== undefined
-        input(type='hidden', name='auto-back', value=false)
+        input(type='hidden', name='auto-back', value=autoBack?"1":"")
+    if termsize !== undefined
+        input(type='hidden', name='termsize', value=termsize?"1":"")
     div#terminal
