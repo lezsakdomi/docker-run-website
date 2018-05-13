@@ -18,8 +18,9 @@ document.addEventListener("DOMContentLoaded", event => {
     let socket;
     try {
         const l = window.location;
-        const uri = (l.protocol === "https:" ? "wss://" : "ws://") + l.host + '/' +
-            inputOpt('socket', '/shell/bash') +
+        const socketPath = inputOpt('socket', '/shell/bash');
+        const uri = (l.protocol === "https:" ? "wss://" : "ws://") + l.host +
+            (socketPath.startsWith('/') ? '' : '/') + socketPath +
             (inputOpt('termsize', true) ? '/' + term.cols + '/' + term.rows : "");
         socket = new WebSocket(uri);
         socket.addEventListener('error', () => {
