@@ -72,7 +72,11 @@ router.get('/', (req, res, next) => {
     // noinspection JSUnresolvedFunction
     require('../modules/db').then(db => {
         const collection = db.collection('setups');
-        collection.find().sort({dateStarted: -1}).toArray().then(setups => res.render('setups', {
+        collection.aggregate([
+            {$lookup: {from: 'users', localField: 'user', foreignField: '_id', as: 'user'}},
+            {$unwind: {path: "$user", preserveNullAndEmptyArrays: true}},
+            {$sort: {dateStarted: -1}},
+        ]).toArray().then(setups => res.render('setups', {
             title: "Manage setups", setups: setups, containers: containers,
             user: req.user,
         }), next);
@@ -230,6 +234,7 @@ router.websocket('/new/:w/:h', ({req}, cb) => {
                                 dateFinished: new Date(),
                                 container: container.id,
                                 dockerData: data,
+                                user: req.user._id,
                             }));
 
                             // Put this object's entries into dataPromise wrapped by `then`s

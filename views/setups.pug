@@ -14,7 +14,7 @@ block content
         - const display = "/setups/" + setup._id; const download = display + "/download";
         form.entry(action=display, attend=setup.failed)
             span.displayName= setup.input
-            span.type= setup.dateStarted
+            span.type= setup.user ? JSON.stringify(setup.user.displayName) : setup.dateStarted
             div.actions
                 button(name="property", value="output") Logs
                 button(name="property", value="archive", formaction=download) Download archive
