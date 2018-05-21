@@ -18,16 +18,19 @@ document.addEventListener("DOMContentLoaded", event => {
     let socket;
     try {
         const l = window.location;
-        const socketPath = inputOpt('socket', '/shell/bash');
+        const socketPath = inputOpt('socket', '/shell/bash').split("?");
         const uri = (l.protocol === "https:" ? "wss://" : "ws://") + l.host +
-            (socketPath.startsWith('/') ? '' : '/') + socketPath +
-            (inputOpt('termsize', true) ? '/' + term.cols + '/' + term.rows : "");
+            (socketPath[0].startsWith('/') ? '' : '/') + socketPath[0] +
+            (inputOpt('termsize', true) ? '/' + term.cols + '/' + term.rows : "") +
+            (socketPath[1] ? '?' + socketPath[1] : "");
+        console.log("Opening websocket to", uri);
         socket = new WebSocket(uri);
         socket.addEventListener('error', () => {
             term.write("\033[31;1mConnection error\033[0m");
         });
         socket.addEventListener('close', console.debug);
     } catch (e) {
+        console.error(e);
         term.write("\033[31mFailed to open connection to remote socket\033[0m\n");
         term.write(e.trace);
     }

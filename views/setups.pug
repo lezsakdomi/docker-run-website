@@ -4,6 +4,8 @@ block content
     h1= title
     a(href='/setups/new')
         button#new Set up a new server
+    a(href='/setups/new?cmd=./batch.sh')
+        button#new Bulk setup
     button#refresh(onclick='location.reload();') Refresh
     if user && user.superuser
         form(action='/setups/reload' method='post')

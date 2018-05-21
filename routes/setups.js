@@ -137,7 +137,8 @@ router.websocket('/updates', ({req}, cb) => {
 router.get('/new', (req, res) => {
     res.render('shell', {
         title: "New server setup",
-        socket: '/setups/new',
+        socket: '/setups/new' +
+        (req.originalUrl.match(/\?/) ? '?' + req.originalUrl.split('?')[1] : ""),
     });
 });
 
@@ -173,6 +174,7 @@ router.websocket('/new/:w/:h', ({req}, cb) => {
                 'Tty': true,
                 'OpenStdin': true,
                 'Image': image,
+                'Cmd': req.query.cmd ? req.query.cmd.split(" ") : undefined,
             }, ttry((err, container) => {
                 if (err) throw err;
                 containers.push(container.id);
