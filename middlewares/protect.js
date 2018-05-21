@@ -18,7 +18,7 @@ protect.valid = function (req, res, next) {
 
 protect.admin = function (req, res, next) {
     if (bypass) return next();
-    if (bypass_admin) return protect.admin.apply(this, arguments);
+    if (bypass_admin) return next();
     return protect.valid(req, res, () => {
         if (!req.user.privileged) {
             res.status(403).render('unprivileged', {
