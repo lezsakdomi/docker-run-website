@@ -440,7 +440,7 @@ router.post('/:id/container/remove', (req, res) => {
     }));
 });
 
-router.post('/:id/delete', (req, res) => {
+router.post('/:id/delete', protect.superuser, (req, res) => {
     const id = req.params.id;
     // noinspection JSUnresolvedFunction
     require('../modules/db').then(db => {
@@ -461,6 +461,35 @@ router.post('/:id/delete', (req, res) => {
                 message: "MongoDB delete failed", error: e,
                 techData: id,
             }));
+    }, e => res.status(500).render('error', {
+        message: "Database connection failed", error: e,
+    }));
+});
+
+router.post('/:id/set', protect.superuser, (req, res) => {
+    const id = req.params.id;
+    // noinspection JSUnresolvedFunction
+    require('../modules/db').then(db => {
+        const collection = db.collection('setups');
+        const _id = MongoDB.ObjectID.isValid(id) ? new MongoDB.ObjectID(id) : id;
+        // noinspection EqualityComparisonWithCoercionJS
+        try {
+            collection.updateOne({_id: _id},
+                {$set: {[req.body.property]: JSON.parse(req.body.value)}})
+                .then(({result}) => {
+                    if (!result.n) throw new Error("Update did not occur on any records");
+                    return result;
+                })
+                .then(() => res.redirect("/setups"), e => res.status(500).render('error', {
+                    message: "MongoDB update failed", error: e,
+                    techData: id,
+                }));
+        } catch (e) {
+            res.status(500).render('error', {
+                message: "Semantic error", error: e,
+                techData: req.body,
+            });
+        }
     }, e => res.status(500).render('error', {
         message: "Database connection failed", error: e,
     }));
