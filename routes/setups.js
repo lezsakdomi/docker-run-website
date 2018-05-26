@@ -124,16 +124,18 @@ router.websocket('/updates', ({req}, cb) => {
             const containersChange = ttry(event => socket.send(JSON.stringify({
                 type: "list-change", list: "containers", event: event,
             })));
-            containers.on('change', containersChange);
+            const containersChangeId = containers.on('change', containersChange);
             socket.on('close', () => {
-                return containers.off(containersChange);
+                return containers.off('change', containersChangeId);
             });
 
             const setupsChange = ttry(event => socket.send(JSON.stringify({
                 type: "list-change", list: "setups", event: event,
             })));
-            setups.on('change', setupsChange);
-            socket.on('close', () => setups.off(setupsChange));
+            const setupsChangeId = setups.on('change', setupsChange);
+            socket.on('close', () => {
+                return setups.off('change', setupsChangeId);
+            });
         })();
     });
 });
